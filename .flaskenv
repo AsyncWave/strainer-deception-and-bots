@@ -1,0 +1,2 @@
+FLASK_APP=strainer
+FLASK_ENV=development
