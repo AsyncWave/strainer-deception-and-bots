@@ -1,1 +1,1 @@
-web: gunicorn app:strainer
+web: gunicorn app:app
