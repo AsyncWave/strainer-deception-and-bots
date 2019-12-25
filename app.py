@@ -38,37 +38,58 @@ def query():
         'queryId': queryId,
         'name': request.json['screenname'],
         'query': request.json['query'],
-        'done': False
+        'dataCollected': False,
+        'credibility': False,
+        'profile': False,
+        'network': False
     }
     query_collection = mongo.db.queries
     result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
     if result != "[]":
-        claim = str(re.findall("\d+", result))
-        return jsonify({'message': 'That claim is already exists with Id ' + claim + ', please use it to check results'}), 400
+        claim = (str(re.findall("\d+", result))).replace('[','').replace(']','').replace('\'','')
+        # claim = re.sub('[[]]', '', claim)
+        return jsonify({'message': 'That Tweet is already exists with Id ' + claim + ', please use it to check results'}), 400
     query_collection.insert(query)
-    return jsonify({'queryId': queryId,'message': 'Query added successfully'}), 201
+    return jsonify({'queryId': queryId,'message': 'Tweet added successfully'}), 201
 
-@app.route('/notdone', methods=['GET'])
+@app.route('/nodata', methods=['GET'])
 @cross_origin()
-def notdone():
+def nodata():
     query_collection = mongo.db.queries
-    docs_list = list(query_collection.find({'done' : False},{ "_id": 0, "queryId": 1, "query": 1 }))
+    docs_list = list(query_collection.find({'dataCollected' : False},{ "_id": 0, "queryId": 1, "query": 1 }))
     return json.dumps(docs_list, default=json_util.default, indent=4, sort_keys=True)
 
-@app.route('/setdone/<id>', methods=['POST'])
+@app.route('/setdata/<id>', methods=['POST'])
 @cross_origin()
-def setdone(id):
+def setdata(id):
     try:
         queryId = int(id)
     except:
-        return jsonify({'message': 'Not a valid query Id'}), 400
+        return jsonify({'message': 'Not a valid Id'}), 400
     
     query_collection = mongo.db.queries
     result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
     if result == "[]":
-        return jsonify({'queryId': queryId, 'message': 'No claim is available for that query Id'}), 400
-    query_collection.update({ "queryId": queryId },{ '$set': { "done": True }})
-    return jsonify({'message': 'Query updated as done'}), 200
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
+    query_collection.update({ "queryId": queryId },{ '$set': { "dataCollected": True }})
+    return jsonify({'message': 'Tweet updated as data collected'}), 200
+
+@app.route('/get/<id>', methods=['GET'])
+@cross_origin()
+def get(id):
+    try:
+        queryId = int(id)
+    except:
+        return jsonify({'message': 'Not a valid Id'}), 400
+    
+    query_collection = mongo.db.queries
+    result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "query": 1 })), default=json_util.default)
+    if result == "[]":
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for Id ' + id + ', rechek and try again!'}), 400
+    # query_collection.update({ "queryId": queryId },{ '$set': { "dataCollected": True }})
+    # queryId = (str(re.findall("\d+", result))).replace('[','').replace(']','').replace('\'','')
+    # return jsonify({'message': 'Query exists', 'queryId': queryId, result}), 200
+    return result, 200
 
 @app.route('/predict',methods=['POST'])
 @cross_origin()
