@@ -1,4 +1,5 @@
 env/
+ref
 
 *.pyc
 __pycache__/
