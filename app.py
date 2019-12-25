@@ -44,7 +44,7 @@ def query():
     result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
     if result != "[]":
         claim = str(re.findall("\d+", result))
-        return jsonify({'message': 'That claim is already exists with Id ' + claim + ', Please use it to check results'}), 400
+        return jsonify({'message': 'That claim is already exists with Id ' + claim + ', please use it to check results'}), 400
     query_collection.insert(query)
     return jsonify({'queryId': queryId,'message': 'Query added successfully'}), 201
 
