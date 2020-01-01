@@ -91,6 +91,20 @@ def get(id):
     # return jsonify({'message': 'Query exists', 'queryId': queryId, result}), 200
     return result, 200
 
+@app.route('/credibility', methods=['POST'])
+@cross_origin()
+def credibility():
+    if not request.json or not 'tweet' in request.json:
+        abort(400)
+    tweet = request.json['tweet']
+    cvec = pickle.load(open("vectorizer.pickle", 'rb'))
+    model = pickle.load(open("model_credibility.pickle", 'rb'))
+    msg = cvec.transform([tweet])
+    pred = model.predict(msg)
+    predictoin = int(pred[0])
+    return jsonify({'prediction': predictoin}), 200
+
+
 @app.route('/predict',methods=['POST'])
 @cross_origin()
 def predict():
