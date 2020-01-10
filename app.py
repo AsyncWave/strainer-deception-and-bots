@@ -7,6 +7,7 @@ import requests
 import pandas as pd
 import string
 import nltk
+nltk.download('stopwords')
 
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -110,8 +111,8 @@ def credibility():
     model = pickle.load(open("model_credibility.pickle", 'rb'))
     msg = cvec.transform([tweet])
     pred = model.predict(msg)
-    predictoin = int(pred[0])
-    return jsonify({'prediction': predictoin}), 200
+    prediction = int(pred[0])
+    return jsonify({'prediction': prediction}), 200
 
 @app.route('/bot/<user>', methods=['GET'])
 @cross_origin()
