@@ -86,6 +86,65 @@ def setdata(id):
     query_collection.update({ "queryId": queryId },{ '$set': { "dataCollected": True }})
     return jsonify({'message': 'Tweet updated as data collected'}), 200
 
+@app.route('/setcredibility/<id>', methods=['POST'])
+@cross_origin()
+def setcredibility(id):
+    try:
+        queryId = int(id)
+    except:
+        return jsonify({'message': 'Not a valid Id'}), 400
+    
+    query_collection = mongo.db.queries
+    result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
+    if result == "[]":
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
+    query_collection.update({ "queryId": queryId },{ '$set': { "credibility": True }})
+    return jsonify({'message': 'Tweet updated as credibility calculated'}), 200
+
+@app.route('/setprofile/<id>', methods=['POST'])
+@cross_origin()
+def setprofile(id):
+    try:
+        queryId = int(id)
+    except:
+        return jsonify({'message': 'Not a valid Id'}), 400
+    
+    query_collection = mongo.db.queries
+    result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
+    if result == "[]":
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
+    query_collection.update({ "queryId": queryId },{ '$set': { "profile": True }})
+    return jsonify({'message': 'Tweet updated as profile calculated'}), 200
+
+@app.route('/setnetwork/<id>', methods=['POST'])
+@cross_origin()
+def setnetwork(id):
+    try:
+        queryId = int(id)
+    except:
+        return jsonify({'message': 'Not a valid Id'}), 400
+    
+    query_collection = mongo.db.queries
+    result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
+    if result == "[]":
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
+    query_collection.update({ "queryId": queryId },{ '$set': { "network": True }})
+    return jsonify({'message': 'Tweet updated as network calculated'}), 200
+
+@app.route('/progress/<id>', methods=['GET'])
+@cross_origin()
+def progress(id):
+    try:
+        queryId = int(id)
+    except:
+        return jsonify({'message': 'Not a valid Id'}), 400
+    
+    query_collection = mongo.db.queries
+    result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 0, "name": 0, "query": 0})), default=json_util.default)
+    if result == "[]":
+        return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
+    return result, 200
+
 @app.route('/get/<id>', methods=['GET'])
 @cross_origin()
 def get(id):
