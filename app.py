@@ -162,6 +162,7 @@ def get(id):
     # return jsonify({'message': 'Query exists', 'queryId': queryId, result}), 200
     return result, 200
 
+#region Credibbility
 @app.route('/credibility', methods=['POST'])
 @cross_origin()
 def credibility():
@@ -174,7 +175,9 @@ def credibility():
     pred = model.predict(msg)
     prediction = int(pred[0])
     return jsonify({'prediction': prediction}), 200
+#endregion
 
+#region Automated Account Detection
 @app.route('/bot/<user>', methods=['GET'])
 @cross_origin()
 def bot(user):
@@ -263,11 +266,21 @@ def bot(user):
 
     text_cols.has_extended_profile = text_cols.has_extended_profile.astype(int)
 
+    df_bot_test['des_hashtags'] = df_bot_test['description'].str.count('#')
+    df_bot_test['des_mentions'] = df_bot_test['description'].str.count('@')
+    df_bot_test['des_length'] = df_bot_test['description'].str.len()
+    df_bot_test['status_hashtags'] = df_bot_test['status'].str.count('#')
+    df_bot_test['status_mentions'] = df_bot_test['status'].str.count('@')
+    df_bot_test['status_length'] = df_bot_test['status'].str.len()
+    df_bot_test['des_link_count'] = df_bot_test['description'].str.count(':')
+
+    feature_set = df_bot_test[['des_link_count', 'des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
+
     text_cols.rename(columns={'has_extended_profile':'has_extended_profile_processed'}, inplace=True)
     text_cols_features = text_cols[['has_extended_profile_processed','name_processed_num_count','screen_name_processed_num_count','screen_name_binary', 'name_binary', 'description_binary', 'status_binary', 'listed_count_binary','location_NA','description_NA','url_NA','status_NA','has_extended_profile_NA']].copy()
     test_data_features = df_bot_test[['verified', 'followers_count', 'friends_count', 'statuses_count']].copy()
 
-    result = pd.concat([text_cols_features, test_data_features], axis=1, sort=False)
+    result = pd.concat([feature_set, text_cols_features, test_data_features], axis=1, sort=False)
     point = result.head(1).to_numpy()
 
     model_bot = pickle.load(open("model_bot.pickle", 'rb'))
@@ -279,21 +292,7 @@ def bot(user):
     # pred = model.predict(msg)
     # predictoin = int(pred[0])
     return jsonify({'prediction': prediction}), 200
-
-@app.route('/predict',methods=['POST'])
-@cross_origin()
-def predict():
-    '''
-    For rendering results on HTML GUI
-    '''
-    int_features = [int(x) for x in request.form.values()]
-    final_features = [np.array(int_features)]
-    prediction = model.predict(final_features)
-
-    output = round(prediction[0], 2)
-
-    return render_template('index.html', prediction_text='Employee Salary should be $ {}'.format(output))
-
+#endregion
 
 if __name__ == "__main__":
     app.run(debug=True)
