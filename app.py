@@ -274,7 +274,13 @@ def bot(user):
     df_bot_test['status_length'] = df_bot_test['status'].str.len()
     df_bot_test['des_link_count'] = df_bot_test['description'].str.count(':')
 
-    feature_set = df_bot_test[['des_link_count', 'des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
+    df_bot_test['status_punctuation'] = df_bot_test['status'].str.count('\.')
+    df_bot_test['des_punctuation'] = df_bot_test['description'].str.count('\.')
+    df_bot_test['status_quote'] = df_bot_test['status'].str.count('"')
+    df_bot_test['des_quote'] = df_bot_test['description'].str.count('"')
+
+    feature_set = df_bot_test[['status_punctuation','des_punctuation','status_quote','des_quote','des_link_count','des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
+    # feature_set = df_bot_test[['des_link_count', 'des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
 
     text_cols.rename(columns={'has_extended_profile':'has_extended_profile_processed'}, inplace=True)
     text_cols_features = text_cols[['has_extended_profile_processed','name_processed_num_count','screen_name_processed_num_count','screen_name_binary', 'name_binary', 'description_binary', 'status_binary', 'listed_count_binary','location_NA','description_NA','url_NA','status_NA','has_extended_profile_NA']].copy()
