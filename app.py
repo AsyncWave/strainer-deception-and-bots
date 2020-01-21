@@ -35,8 +35,6 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 mongo.init_app(app)
 
-model = pickle.load(open('model.pkl', 'rb'))
-
 class AfterThisResponse:
     def __init__(self, app=None):
         self.callbacks = []
