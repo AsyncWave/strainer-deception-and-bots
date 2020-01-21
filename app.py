@@ -10,7 +10,9 @@ import nltk
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('wordnet')
+import traceback
 
+from werkzeug.wsgi import ClosingIterator
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
@@ -35,6 +37,48 @@ mongo.init_app(app)
 
 model = pickle.load(open('model.pkl', 'rb'))
 
+class AfterThisResponse:
+    def __init__(self, app=None):
+        self.callbacks = []
+        if app:
+            self.init_app(app)
+
+    def __call__(self, callback):
+        self.callbacks.append(callback)
+        return callback
+
+    def init_app(self, app):
+        # install extensioe
+        app.after_this_response = self
+
+        # install middleware
+        app.wsgi_app = AfterThisResponseMiddleware(app.wsgi_app, self)
+
+    def flush(self):
+        try:
+            for fn in self.callbacks:
+                try:
+                    fn()
+                except Exception:
+                    traceback.print_exc()
+        finally:
+            self.callbacks = []
+
+class AfterThisResponseMiddleware:
+    def __init__(self, application, after_this_response_ext):
+        self.application = application
+        self.after_this_response_ext = after_this_response_ext
+
+    def __call__(self, environ, start_response):
+        iterator = self.application(environ, start_response)
+        try:
+            return ClosingIterator(iterator, [self.after_this_response_ext.flush])
+        except Exception:
+            traceback.print_exc()
+            return iterator
+
+AfterThisResponse(app)
+
 @app.route('/')
 @cross_origin()
 def home():
@@ -50,11 +94,18 @@ def query():
         'queryId': queryId,
         'name': request.json['screenname'],
         'query': request.json['query'],
+        'botAmount': 0,
+        'credAmount': 0,
         'dataCollected': False,
         'credibility': False,
         'profile': False,
         'network': False
     }
+
+    queryToSend={}
+    queryToSend['queryId'] = queryId
+    queryToSend['query']= request.json['query']
+
     query_collection = mongo.db.queries
     result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
     if result != "[]":
@@ -62,6 +113,10 @@ def query():
         # claim = re.sub('[[]]', '', claim)
         return jsonify({'message': 'That Tweet is already exists with Id ' + claim + ', please use it to check results','queryId': claim}), 400
     query_collection.insert(query)
+
+    response = requests.post('https://strainer-data-demo.herokuapp.com/query', json=queryToSend)
+    if response.status_code != 201:
+        abort(400)
     return jsonify({'queryId': queryId,'message': 'Tweet added successfully'}), 201
 
 @app.route('/nodata', methods=['GET'])
@@ -84,7 +139,52 @@ def setdata(id):
     if result == "[]":
         return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 400
     query_collection.update({ "queryId": queryId },{ '$set': { "dataCollected": True }})
-    return jsonify({'message': 'Tweet updated as data collected'}), 200
+
+    @app.after_this_response
+    def post_process():
+        responce = requests.get('https://strainer-data-demo.herokuapp.com/get/'+ str(queryId))
+        cvec = pickle.load(open("vectorizer.pickle", 'rb'))
+        model = pickle.load(open("model_credibility.pickle", 'rb'))
+        total = 0
+        cred = 0
+        for tweet in responce.json(): 
+            # print(tweet['tweet'])
+            total = total + 1
+            tweet = tweet['tweet']
+            msg = cvec.transform([tweet])
+            pred = model.predict(msg)
+            prediction = int(pred[0])
+            if (prediction == 1):
+                cred = cred + 1
+
+        totalcred = (cred/total)*100
+        query_collection.update({ "queryId": queryId },{ '$set': { "credAmount": totalcred }})
+
+    return jsonify({'message': 'Tweet updated'}), 200
+
+@app.route('/final/<dashboard>/<id>', methods=['GET'])
+@cross_origin()
+def final(dashboard,id):
+    try:
+        queryId = int(id)
+        selector = int(dashboard)
+    except:
+        return jsonify({'message': 'Not a valid Id or Selector'}), 400
+
+    query_collection = mongo.db.queries
+    if (dashboard == '0'):
+        result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "credAmount": 1 })), default=json_util.default)
+        if result == "[]":
+            return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 404
+        return result, 200
+
+    elif (dashboard == '1'):
+        result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "botAmount": 1 })), default=json_util.default)
+        if result == "[]":
+            return jsonify({'queryId': queryId, 'message': 'No tweet is available for that Id'}), 404
+        return result, 200
+    else:
+        abort(400)
 
 @app.route('/setcredibility/<id>', methods=['POST'])
 @cross_origin()
