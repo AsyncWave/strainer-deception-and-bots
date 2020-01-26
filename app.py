@@ -143,20 +143,141 @@ def setdata(id):
         responce = requests.get('https://strainer-data-demo.herokuapp.com/get/'+ str(queryId))
         cvec = pickle.load(open("vectorizer.pickle", 'rb'))
         model = pickle.load(open("model_credibility.pickle", 'rb'))
+        model_bot = pickle.load(open("model_bot.pickle", 'rb'))
+
         total = 0
+        total_bot = 0
         cred = 0
+        bot = 0
         for tweet in responce.json(): 
-            # print(tweet['tweet'])
+            # print(tweet[0])
             total = total + 1
-            tweet = tweet['tweet']
-            msg = cvec.transform([tweet])
-            pred = model.predict(msg)
-            prediction = int(pred[0])
-            if (prediction == 1):
+            tweet0 = tweet['tweet']
+            msg = cvec.transform([tweet0])
+            pred0 = model.predict(msg)
+            prediction0 = int(pred0[0])
+            print(total)
+            if (prediction0 == 1):
                 cred = cred + 1
 
         totalcred = (cred/total)*100
         query_collection.update({ "queryId": queryId },{ '$set': { "credAmount": totalcred }})
+
+        for tweet in responce.json():
+            try:
+                location = tweet['location']
+                description = tweet['description']
+                url = tweet['url']
+                created_at = tweet['created_at']
+                lang = "" if tweet['lang'] == None else tweet['lang']
+                status = tweet['tweet']
+                has_extended_profile = tweet['has_extended_profile']
+                name = tweet['name']
+                verified = tweet['verified']
+                followers_count = tweet['followers_count']
+                friends_count = tweet['friends_count']
+                statuses_count = tweet['statuses_count']
+                listed_count = tweet['listed_count']
+                screen_name = tweet['screen_name']
+                total_bot = total_bot + 1
+                print(total_bot)
+            except:
+                print('error on bot detection')
+                # return jsonify({'message': 'Somrthing went wrong'}), 400
+                
+            
+            df_bot_test = pd.DataFrame(columns=["screen_name", "location", "description","url","created_at","lang","status","has_extended_profile","name","verified","followers_count","friends_count","statuses_count","listed_count"], data=[[screen_name, location, description, url, created_at,lang,status,has_extended_profile,name,verified,followers_count,friends_count, statuses_count,listed_count]])
+            text_cols = df_bot_test[['screen_name','location','description','url','created_at','lang','status','has_extended_profile','name']].copy()
+            text_cols.rename(columns={'screen_name':'screen_name_processed'}, inplace=True)
+            text_cols.rename(columns={'name':'name_processed'}, inplace=True)
+
+            variable = 'screen_name'
+            stop_words = set(stopwords.words('english'))
+            text_cols[variable+'_processed_num_count'] = ""
+            for i, row1 in text_cols.iterrows():
+                row1[variable+'_processed'] = row1[variable+'_processed'].lower() #Convert text to lowercase
+                row1[variable+'_processed_num_count'] = sum(ch.isdigit() for ch in row1[variable+'_processed']) #create new column to get number of numbers
+                row1[variable+'_processed'] = re.sub(r'\d+','', row1[variable+'_processed']) #Remove numbers
+                row1[variable+'_processed']= row1[variable+'_processed'].translate(str.maketrans('','',string.punctuation)) #Remove punctuation
+                row1[variable+'_processed'] = row1[variable+'_processed'].strip() #Remove whitespaces
+                row1[variable+'_processed'] = [i for i in word_tokenize(row1[variable+'_processed']) if not i in stop_words] #Tokenization - REMOVE STOP WORDS
+                for word in row1[variable+'_processed']:
+                    row1[variable+'_processed'] = lemmatizer.lemmatize(word)
+                text_cols.at[i, 'screen_name_processed'] = row1['screen_name_processed']
+                text_cols.at[i, 'screen_name_processed_num_count'] = row1['screen_name_processed_num_count']
+
+            text_cols['name_processed_num_count'] = ""
+            for index, row in text_cols.iterrows():
+                row['name_processed'] = row['name_processed'].lower() #Convert text to lowercase
+                row['name_processed_num_count'] = (sum(c.isdigit() for c in row['name_processed'])) #create new column to get number of numbers
+                row['name_processed'] = re.sub(r'\d+','', row['name_processed']) #Remove numbers
+                row['name_processed']= row['name_processed'].translate(str.maketrans('','',string.punctuation)) #Remove punctuation
+                row['name_processed'] = row['name_processed'].strip() #Remove whitespaces
+                row['name_processed'] = [i for i in word_tokenize(row['name_processed']) if not i in stop_words] #Tokenization - REMOVE STOP WORDS
+                text_cols.at[index, 'name_processed'] = row['name_processed']
+                text_cols.at[index, 'name_processed_num_count'] = row['name_processed_num_count']
+
+            word_list = r'bot|b0t|cannabis|tweet me|mishear|follow me|updates every|gorilla|yes_ofc|forget' \
+                            r'expos|kill|clit|bbb|butt|fuck|XXX|sex|truthe|fake|anony|free|virus|funky|RNA|kuck|jargon' \
+                            r'nerd|swag|jack|bang|bonsai|chick|prison|paper|pokem|xx|freak|ffd|dunia|clone|genie|bbb' \
+                            r'ffd|onlyman|emoji|joke|troll|droop|free|every|wow|cheese|yeah|bio|magic|wizard|face'
+            listofwords = pickle.load(open("words_in_not_credible.pickle", 'rb'))
+            listofwords2 = pickle.load(open("word_couples_in_not_credible.pickle", 'rb'))
+            list_ofwords=list(listofwords)
+            str1 = '|'.join(str(e) for e in list_ofwords)
+            list_ofwords2=list(listofwords2)
+            str2 = '|'.join(str(e) for e in list_ofwords2)
+            word_list = str1 + '|' + str2 + '|' + word_list
+
+            text_cols['screen_name_binary'] = df_bot_test.screen_name.str.contains(word_list, case=False, na=False)
+            text_cols['name_binary'] = df_bot_test.name.str.contains(word_list, case=False, na=False)
+            text_cols['description_binary'] = df_bot_test.description.str.contains(word_list, case=False, na=False)
+            text_cols['status_binary'] = df_bot_test.status.str.contains(word_list, case=False, na=False)
+            text_cols['listed_count_binary'] = (df_bot_test.listed_count>20000)==False
+
+            for column in df_bot_test:
+                text_cols[column+'_NA'] = np.where(df_bot_test[column].isnull(), 1, 0)
+            
+            variable = 'has_extended_profile'
+            for i, row in text_cols[text_cols[variable].isnull()].iterrows():
+                obs_sample = text_cols[variable].dropna().sample(1, random_state=int(row.screen_name_processed_num_count))
+                obs_sample.index = [i]
+                text_cols.at[i, variable] = obs_sample
+
+            text_cols.has_extended_profile = text_cols.has_extended_profile.astype(int)
+
+            df_bot_test['des_hashtags'] = df_bot_test['description'].str.count('#')
+            df_bot_test['des_mentions'] = df_bot_test['description'].str.count('@')
+            df_bot_test['des_length'] = df_bot_test['description'].str.len()
+            df_bot_test['status_hashtags'] = df_bot_test['status'].str.count('#')
+            df_bot_test['status_mentions'] = df_bot_test['status'].str.count('@')
+            df_bot_test['status_length'] = df_bot_test['status'].str.len()
+            df_bot_test['des_link_count'] = df_bot_test['description'].str.count(':')
+
+            df_bot_test['status_punctuation'] = df_bot_test['status'].str.count('\.')
+            df_bot_test['des_punctuation'] = df_bot_test['description'].str.count('\.')
+            df_bot_test['status_quote'] = df_bot_test['status'].str.count('"')
+            df_bot_test['des_quote'] = df_bot_test['description'].str.count('"')
+
+            feature_set = df_bot_test[['status_punctuation','des_punctuation','status_quote','des_quote','des_link_count','des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
+            # feature_set = df_bot_test[['des_link_count', 'des_hashtags', 'des_mentions', 'des_length', 'status_hashtags','status_mentions','status_length']].copy().fillna(0)
+
+            text_cols.rename(columns={'has_extended_profile':'has_extended_profile_processed'}, inplace=True)
+            text_cols_features = text_cols[['has_extended_profile_processed','name_processed_num_count','screen_name_processed_num_count','screen_name_binary', 'name_binary', 'description_binary', 'status_binary', 'listed_count_binary','location_NA','description_NA','url_NA','status_NA','has_extended_profile_NA']].copy()
+            test_data_features = df_bot_test[['verified', 'followers_count', 'friends_count', 'statuses_count']].copy()
+
+            result = pd.concat([feature_set, text_cols_features, test_data_features], axis=1, sort=False)
+            point = result.head(1).to_numpy()
+
+            pred1 = model_bot.predict(point.reshape(1, -1))
+            prediction1 = int(pred1[0])
+            if (prediction1 == 1):
+                bot = bot + 1
+        
+        totalbot = (bot/total_bot)*100
+        query_collection.update({ "queryId": queryId },{ '$set': { "botAmount": totalbot }})
+
+        query_collection.update({ "queryId": queryId },{ '$set': { "credibility": True }})
 
     return jsonify({'message': 'Tweet updated'}), 200
 
