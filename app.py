@@ -102,10 +102,13 @@ def query():
         'forecast': 0
     }
 
+    arr = str(request.json['keyword_list']).replace("'",'')
+    data = json.loads(arr)
+
     queryToSend={}
     queryToSend['queryId'] = queryId
     queryToSend['query']= request.json['query']
-    queryToSend['keyword_list']= request.json['keyword_list'].replace("'", "")
+    queryToSend['keyword_list']= data
     print("request.json >>>>",request.json)
     print("queryToSend >>>>",queryToSend)
 
