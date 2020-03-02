@@ -283,9 +283,16 @@ def setdata(id):
                 bot = bot + 1
         
         totalbot = (bot/total_bot)*100
+        if (totalbot > 50):
+            total_bot = total_bot - 30
+        if (totalbot > 40):
+            total_bot = total_bot - 20
+
         query_collection.update({ "queryId": queryId },{ '$set': { "botAmount": totalbot }})
 
         query_collection.update({ "queryId": queryId },{ '$set': { "credibility": True }})
+
+        query_collection.update({ "queryId": queryId },{ '$set': { "profile": True }})
 
     return jsonify({'message': 'Tweet updated'}), 200
 
