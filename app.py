@@ -106,8 +106,8 @@ def query():
     queryToSend['queryId'] = queryId
     queryToSend['query']= request.json['query']
     queryToSend['keyword_list']= request.json['keyword_list']
-    print("request.json['keyword_list'] >>>>",request.json['keyword_list'])
-    print("queryToSend['keyword_list'] >>>>",queryToSend['keyword_list'])
+    print("request.json >>>>",request.json)
+    print("queryToSend >>>>",queryToSend)
 
     query_collection = mongo.db.queries
     result = json.dumps(list(query_collection.find({'queryId' : queryId},{ "_id": 0, "queryId": 1 })), default=json_util.default)
