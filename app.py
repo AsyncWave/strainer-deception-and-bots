@@ -105,7 +105,7 @@ def query():
     queryToSend={}
     queryToSend['queryId'] = queryId
     queryToSend['query']= request.json['query']
-    queryToSend['keyword_list']= request.json['keyword_list']
+    queryToSend['keyword_list']= request.json['keyword_list'].replace("'", "")
     print("request.json >>>>",request.json)
     print("queryToSend >>>>",queryToSend)
 
