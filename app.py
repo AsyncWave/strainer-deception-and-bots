@@ -164,7 +164,7 @@ def setdata(id):
             msg = cvec.transform([tweet0])
             pred0 = model.predict(msg)
             prediction0 = int(pred0[0])
-            print("Calculating credibility for tweet " + total)
+            print("Calculating credibility for tweet " + str(total))
             if (prediction0 == 1):
                 cred = cred + 1
 
@@ -188,7 +188,7 @@ def setdata(id):
                 listed_count = tweet['listed_count']
                 screen_name = tweet['screen_name']
                 total_bot = total_bot + 1
-                print("Bot account detection for tweet " + total_bot)
+                print("Bot account detection for tweet " + str(total_bot))
             except:
                 print('error on bot detection')
                 # return jsonify({'message': 'Somrthing went wrong'}), 400
