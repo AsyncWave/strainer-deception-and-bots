@@ -92,7 +92,6 @@ def query():
         'queryId': queryId,
         'name': request.json['screenname'],
         'query': request.json['query'],
-        'keyword_list': request.json['keyword_list'],
         'botAmount': 0,
         'credAmount': 0,
         'dataCollected': False,
@@ -101,14 +100,14 @@ def query():
         'network': False,
         'forecast': 0
     }
-
-    arr = str(request.json['keyword_list']).replace("'",'')
-    data = json.loads(arr)
+    # 'keyword_list': request.json['keyword_list'],
+    # arr = str(request.json['keyword_list']).replace("'",'')
+    # data = json.loads(arr)
 
     queryToSend={}
     queryToSend['queryId'] = queryId
     queryToSend['query']= request.json['query']
-    queryToSend['keyword_list']= data
+    # queryToSend['keyword_list']= data
     print("request.json >>>>",request.json)
     print("queryToSend >>>>",queryToSend)
 
