@@ -27,7 +27,7 @@ mongo = PyMongo()
 
 app = Flask(__name__)
 
-app.config["MONGO_URI"] = 'mongodb+srv://strainer_admin:strainer_admin123@strainercluster-igrpg.azure.mongodb.net/strainer?retryWrites=true&w=majority'
+app.config["MONGO_URI"] = ''
 
 CORS(app)
 
